@@ -1,0 +1,62 @@
+{
+    "name": "Alex SOC Final Intelligence Report",
+    "versions": {
+        "layer": "4.4",
+        "navigator": "4.9.1",
+        "platform": "14.1"
+    },
+    "domain": "enterprise-attack",
+    "description": "Automated vSOC Intelligence Report",
+    "techniques": [
+        {
+            "techniqueID": "T1059",
+            "color": "#e60000",
+            "comment": "Auto-detected 22059 events in winlogbeat-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1071",
+            "color": "#e60000",
+            "comment": "Auto-detected 2011 events in winlogbeat-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1059.001",
+            "color": "#ff6666",
+            "comment": "Auto-detected 413 events in winlogbeat-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1110",
+            "color": "#ff6666",
+            "comment": "Auto-detected 16 events in winlogbeat-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1078",
+            "color": "#e60000",
+            "comment": "Auto-detected 1011 events in winlogbeat-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1071.001",
+            "color": "#e60000",
+            "comment": "Auto-detected 4137 events in suricata-*",
+            "enabled": true
+        },
+        {
+            "techniqueID": "T1595",
+            "color": "#ff6666",
+            "comment": "Auto-detected 73 events in suricata-*",
+            "enabled": true
+        }
+    ],
+    "gradient": {
+        "colors": [
+            "#ff6666",
+            "#e60000"
+        ],
+        "minValue": 1,
+        "maxValue": 100
+    }
+}
