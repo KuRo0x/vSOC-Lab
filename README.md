@@ -5,6 +5,12 @@ A detection-focused **Virtual Security Operations Center (vSOC)** lab designed t
 This project emphasizes **detection engineering**, **pipeline control**, and **MITRE ATT&CK–aligned alerting**, rather than offensive tooling or exploit simulation.
 
 ---
+## System Architecture
+
+![vSOC System Architecture](evidence/network/architecture-diagram.png)
+
+*Figure 1: High-level vSOC architecture used for detection engineering and awareness validation.*
+
 
 ## 🎯 Project Goals
 
