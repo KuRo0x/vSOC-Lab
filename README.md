@@ -1,9 +1,6 @@
 # vSOC Detection Lab
 
-A detection-focused **Virtual Security Operations Center (vSOC)** lab designed to simulate how a real SOC ingests, processes, and analyzes security telemetry across endpoint, network, and gateway layers.
-
-This project emphasizes **detection engineering**, **pipeline control**, and **MITRE ATT&CK–aligned alerting**, rather than offensive tooling or exploit simulation.
-
+A detection-focused Virtual Security Operations Center (vSOC) lab simulating real SOC telemetry ingestion, investigation, and MITRE ATT&CK–aligned detection, including a SOC-validated phishing awareness training exercise
 ---
 ## System Architecture
 
