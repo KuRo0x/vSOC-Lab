@@ -24,6 +24,15 @@ Detections focus on:
 
 ## 2. Active Detections
 
+| Detection | MITRE | Data Source | Confidence |
+| :--- | :--- | :--- | :--- |
+| Suspicious Encoded PowerShell | T1059.001 | Sysmon (EID 1) | High |
+| LOLBin Abuse: Certutil Ingress | T1105 | Sysmon (EID 1) | High |
+| Persistence: Registry Run Key | T1547.001 | Sysmon (EID 13) | High |
+| Local Account Creation (Sigma) | T1136.001 | Windows Security | High |
+| Post-Exploitation Discovery | T1033 | Windows Security | Medium |
+| Unauthorized DNS Egress | T1071.004 | pfSense Logs | High |
+
 ---
 
 ### 2.1 Suspicious PowerShell Execution  
@@ -48,6 +57,12 @@ Detections focus on:
 **Why It Matters:**  
 PowerShell is frequently abused for initial access, execution, and post-exploitation while blending in with legitimate administration activity.
 
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint, run a harmless encoded command:
+   - `powershell.exe -NoP -enc VwByAGkAdABlAC0ASABvAHMAdAAgAFYAUwBPAEMALQBMAGEAYgA=`
+2. Confirm a Sysmon process creation event shows `-enc`.
+3. Validate the detection alert in Kibana with the full command-line context.
+
 ---
 
 ### 2.2 LOLBin Abuse: Certutil  
@@ -70,6 +85,12 @@ PowerShell is frequently abused for initial access, execution, and post-exploita
 **Why It Matters:**  
 Attackers abuse trusted binaries to bypass application allowlisting and reduce detection surface.
 
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint, run:
+   - `certutil.exe -urlcache -split -f https://example.com/`
+2. Confirm Sysmon logs the process execution and URL in the command line.
+3. Validate the detection alert in Kibana.
+
 ---
 
 ### 2.3 Registry-Based Persistence  
@@ -89,6 +110,12 @@ Attackers abuse trusted binaries to bypass application allowlisting and reduce d
 
 **Why It Matters:**  
 Persistence ensures attacker access across reboots and user sessions.
+
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint, set a test Run key:
+   - `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v VSOC-Lab-Test /t REG_SZ /d "C:\\Windows\\System32\\notepad.exe" /f`
+2. Confirm Sysmon logs the registry modification event.
+3. Validate the detection alert in Kibana.
 
 ---
 
@@ -111,6 +138,13 @@ Persistence ensures attacker access across reboots and user sessions.
 **Why It Matters:**  
 Discovery often precedes lateral movement or privilege escalation.
 
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint, run:
+   - `whoami`
+   - `hostname`
+2. Confirm Sysmon process creation events for these commands.
+3. Validate the detection alert in Kibana.
+
 ---
 
 ### 2.5 DNS Policy Violation  
@@ -129,6 +163,12 @@ Discovery often precedes lateral movement or privilege escalation.
 
 **Why It Matters:**  
 DNS is commonly used for command-and-control and data exfiltration.
+
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint, attempt direct DNS resolution:
+   - `nslookup example.com 8.8.8.8`
+2. Confirm pfSense logs a blocked outbound DNS attempt.
+3. Validate the detection alert in Kibana.
 
 ---
 
@@ -150,6 +190,12 @@ DNS is commonly used for command-and-control and data exfiltration.
 
 **Why It Matters:**  
 Unauthorized account creation enables long-term persistence and privilege escalation.
+
+**Validation / Reproduction (Lab):**
+1. On the Windows endpoint (admin context), create a test user:
+   - `net user vsoc-test-user P@ssw0rd! /add`
+2. Confirm Windows Security logs the account creation event.
+3. Validate the detection alert in Kibana.
 
 ---
 

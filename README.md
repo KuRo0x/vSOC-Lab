@@ -112,6 +112,28 @@ Detailed documentation is available in `/docs`:
 
 ---
 
+## ✅ Quickstart Validation (Reviewer Path)
+
+Use this checklist to validate the lab flow end-to-end and confirm the documented detections.
+
+1. **Confirm data ingestion**
+   - Open Kibana and verify recent events in:
+     - `winlogbeat-*`
+     - `pfsense-*`
+     - `suricata-*`
+2. **Validate endpoint detections**
+   - Review detection logic and reproduction steps in `docs/DETECTIONS.md`
+   - Confirm alerts appear with command-line context and Sysmon fields
+3. **Validate network detections**
+   - Trigger a DNS policy violation from the endpoint
+   - Verify pfSense deny logs arrive in Elasticsearch
+4. **Review evidence artifacts**
+   - See `evidence/endpoint/`, `evidence/siem/`, and `evidence/network/`
+
+This path is intentionally short to help reviewers validate the lab quickly.
+
+---
+
 ## 🛠️ Automation (Optional Layer)
 
 The repository includes an automation layer that:
