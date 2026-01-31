@@ -70,7 +70,31 @@ The lab includes behavior-based detections for:
 
 All detections are aligned to **MITRE ATT&CK** and documented with justification.
 
+
 ---
+
+## 🧯 Incident Response Case Studies
+
+In addition to detection engineering, this lab includes documented
+incident response case studies designed to mirror real SOC workflows,
+from initial detection through containment and post-incident improvement.
+
+### Documented Incidents
+
+#### INC-001 – Phishing-Driven Malware Delivery Attempt
+A phishing-based malware delivery attempt detected via endpoint telemetry
+and contained using network-level firewall controls before payload execution.
+
+**Key elements:**
+- Detection using Elastic (Winlogbeat + Sysmon)
+- Investigation of browser download artifacts (`.crdownload`, `Zone.Identifier`)
+- Network containment via pfSense using IOC-based firewall aliases
+- Evidence-backed documentation and SOC-style playbook
+
+📁 Case documentation: `incidents/INC-001-phishing/`
+
+These case studies complement the detection logic by demonstrating
+how alerts are operationalized in a SOC context.
 
 ## 📸 Evidence (Selected)
 
@@ -152,8 +176,9 @@ This logic is intentionally separated from documentation.
 
 - Defensive monitoring only
 - No exploitation or malware deployment
-- No automated response or blocking
+- No automated response; containment actions are manually implemented and documented
 - Non-production lab environment
+- Demonstrated ability to progress from detection to containment and incident closure
 
 The focus is on **visibility, detection, and explainability**.
 
