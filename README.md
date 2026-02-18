@@ -4,7 +4,7 @@ A detection-focused Virtual Security Operations Center (vSOC) lab simulating rea
 ---
 ## System Architecture
 
-![vSOC System Architecture](evidence/network/architecture-diagram.png)
+![vSOC System Architecture](architecture/architecture-diagram.png)
 
 *Figure 1: High-level vSOC architecture used for detection engineering and awareness validation.*
 
