@@ -1,0 +1,25 @@
+title: Windows Service Creation via sc.exe
+id: 9c1f2a3b-4d5e-4f60-8a7b-1c2d3e4f5a6b
+status: experimental
+description: Detects service creation via sc.exe, which can be used for persistence or lateral movement.
+author: KuRo
+date: 2026-02-04
+tags:
+  - attack.persistence
+  - attack.t1543.003
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+  selection_sc:
+    Image|endswith: '\sc.exe'
+  selection_create:
+    CommandLine|re: '(?i)\bcreate\b'
+
+  condition: selection_sc and selection_create
+
+falsepositives:
+  - Legitimate service installs by administrators or software deployment tools
+level: medium

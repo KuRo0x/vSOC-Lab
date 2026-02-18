@@ -1,0 +1,60 @@
+title: Suspicious Scheduled Task Creation via schtasks.exe
+id: 2f9a1d1e-4c2b-4d8f-9b1a-7c6d5e4f3a21
+status: experimental
+description: Detects schtasks.exe task creation with suspicious execution targets, locations, or triggers commonly used for persistence.
+author: KuRo
+date: 2026-02-04
+tags:
+  - attack.persistence
+  - attack.t1053.005
+  - attack.defense_evasion
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+  selection_create:
+    Image|endswith: '\schtasks.exe'
+    CommandLine|re: '(?i)\s(/create|-create)\b'
+
+  selection_suspicious_target:
+    CommandLine|contains:
+      - ' powershell'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - ' wscript'
+      - '\wscript.exe'
+      - ' cscript'
+      - '\cscript.exe'
+      - ' mshta'
+      - '\mshta.exe'
+      - ' rundll32'
+      - '\rundll32.exe'
+      - ' regsvr32'
+      - '\regsvr32.exe'
+
+  selection_suspicious_paths:
+    CommandLine|contains:
+      - '\AppData\Local\Temp\'
+      - '\Windows\Temp\'
+      - '\Users\Public\'
+      - ':\Temp\'
+      - '\ProgramData\'
+
+  selection_logon_or_startup:
+    CommandLine|contains:
+      - ' /sc onlogon'
+      - ' /sc onstart'
+
+  selection_stealth:
+    CommandLine|contains:
+      - ' /ru SYSTEM'
+      - ' /rl HIGHEST'
+
+  condition: selection_create and (selection_suspicious_target or selection_suspicious_paths or selection_logon_or_startup or selection_stealth)
+
+falsepositives:
+  - Some enterprise software creates SYSTEM/HIGHEST scheduled tasks legitimately
+  - Admin scripts that deploy tasks for maintenance
+level: high

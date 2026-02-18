@@ -1,0 +1,54 @@
+title: PowerShell Encoded Command With Suspicious Execution Context
+id: 7b0c9c1f-3a2d-4c2c-8b9f-1a2b3c4d5e6f
+status: experimental
+description: Detects PowerShell launched with an encoded command when combined with suspicious parent processes or stealth execution flags, increasing confidence of malicious activity.
+author: KuRo
+date: 2026-02-04
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+
+  selection_encoded:
+    CommandLine|re: '(?i)\s(-encodedcommand|-enc|/encodedcommand|/enc)\s+[A-Za-z0-9+/=]{20,}'
+
+  selection_suspicious_parent:
+    ParentImage|endswith:
+      - '\WINWORD.EXE'
+      - '\EXCEL.EXE'
+      - '\OUTLOOK.EXE'
+      - '\POWERPNT.EXE'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+
+  selection_stealth_flags:
+    CommandLine|contains:
+      - ' -nop'
+      - ' -noni'
+      - ' -w hidden'
+      - ' -windowstyle hidden'
+
+  filter_management_tools:
+    ParentImage|endswith:
+      - '\ccmexec.exe'
+      - '\sccmexec.exe'
+
+  condition: selection_powershell and selection_encoded and not filter_management_tools and (selection_suspicious_parent or selection_stealth_flags)
+
+falsepositives:
+  - Legitimate IT automation frameworks using encoded PowerShell
+level: high

@@ -1,0 +1,59 @@
+title: Office Spawning PowerShell With Download or Web Execution Pattern
+id: 8a7f64c6-61f1-4f34-8a3f-1b4d0a7c2c03
+status: experimental
+description: Detects Microsoft Office applications spawning PowerShell with common web download or execution patterns, often associated with phishing or macro abuse.
+author: KuRo
+date: 2026-02-04
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.t1204.002
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+
+  selection_office_parent:
+    ParentImage|endswith:
+      - '\WINWORD.EXE'
+      - '\EXCEL.EXE'
+      - '\POWERPNT.EXE'
+      - '\OUTLOOK.EXE'
+
+  selection_powershell_child:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+
+  selection_download_patterns:
+    CommandLine|contains:
+      - 'Invoke-WebRequest'
+      - 'DownloadString'
+      - 'DownloadFile'
+      - 'Net.WebClient'
+      - 'Start-BitsTransfer'
+      - 'http://'
+      - 'https://'
+
+  selection_encoded:
+    CommandLine|re: '(?i)\s(-encodedcommand|-enc)\s+[A-Za-z0-9+/=]{20,}'
+
+  selection_suspicious_flags:
+    CommandLine|contains:
+      - ' -nop'
+      - ' -noni'
+      - ' -w hidden'
+      - ' -windowstyle hidden'
+
+  filter_known_good_domains:
+    CommandLine|contains:
+      - 'intranet.local'
+      - 'company-software.local'
+
+  condition: selection_office_parent and selection_powershell_child and (selection_download_patterns or selection_encoded or selection_suspicious_flags) and not filter_known_good_domains
+
+falsepositives:
+  - Rare enterprise automation using Office macros to trigger legitimate PowerShell web requests
+level: high

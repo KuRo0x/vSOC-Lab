@@ -1,0 +1,40 @@
+title: Suspicious Script Host to PowerShell Chain With Stealth Indicators
+id: 4d3c2b1a-7e6f-4a9b-8c1d-5e2f3a4b6c70
+status: experimental
+description: Detects script hosts launching PowerShell with encoded or stealthy command-line arguments.
+author: KuRo
+date: 2026-02-04
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+  selection_chain:
+    ParentImage|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+
+  selection_encoded:
+    CommandLine|re: '(?i)\s(-encodedcommand|-enc)\s+[A-Za-z0-9+/=]{20,}'
+
+  selection_stealth:
+    CommandLine|contains:
+      - ' -nop'
+      - ' -noni'
+      - ' -w hidden'
+      - ' -windowstyle hidden'
+
+  condition: selection_chain and (selection_encoded or selection_stealth)
+
+falsepositives:
+  - Rare legitimate automation using encoded PowerShell through script hosts
+level: high
