@@ -1,0 +1,35 @@
+title: Suspicious PowerShell Execution from CMD
+id: 8a7b9c2d-5f0e-4a77-b9f5-psh-cmd-detection
+status: experimental
+description: Detects PowerShell launched from cmd.exe with ExecutionPolicy Bypass, which may indicate malicious script execution.
+author: Walid Ait Zaouit
+date: 2026-03-07
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+  selection:
+    ParentImage|endswith: '\cmd.exe'
+    Image|endswith: '\powershell.exe'
+    CommandLine|contains: 'ExecutionPolicy Bypass'
+  condition: selection
+
+fields:
+  - Image
+  - ParentImage
+  - CommandLine
+  - User
+  - ProcessGuid
+
+falsepositives:
+  - Administrative scripts
+  - IT automation tools
+
+level: high
+
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.t1059.003
