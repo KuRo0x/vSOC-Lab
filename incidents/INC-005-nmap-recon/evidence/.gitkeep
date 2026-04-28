@@ -1,0 +1,10 @@
+# Drop your evidence files here:
+# - pfsense_syn_log.txt
+# - suricata_eve_alerts.json
+# - sysmon_event3.csv
+# - nmap_stage1_syn.txt
+# - nmap_stage2_os.txt
+# - nmap_stage3_versions.txt
+# - kibana_discover_screenshot.png
+# - kibana_alerts_screenshot.png
+# - kali_terminal_screenshot.png
