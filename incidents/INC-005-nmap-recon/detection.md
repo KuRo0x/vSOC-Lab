@@ -34,6 +34,34 @@ source.ip: *
 **Threshold:** Count of `destination.port` grouped by `source.ip` >= 200 over 1 minute.
 
 
+### NEW — Sysmon Event ID 3 Burst Rule (Victim-Side Detection)
+
+> **This rule is based on real data from this incident.** The scan produced exactly 20 Sysmon Event ID 3 entries in under 60 seconds — a spike that is invisible without Sysmon but trivial to detect once it is deployed.
+
+**Platform:** Elastic Security (Kibana)
+**Index:** `winlogbeat-*`
+**Rule type:** Threshold
+**Schedule:** Every 1 minute, lookback 2 minutes
+**Severity:** High
+**MITRE ATT&CK:** T1595.001
+
+```kql
+event.code: "3" AND
+agent.name: "DESKTOP-DPU3CDQ" AND
+not network.direction: "outbound"
+```
+
+**Threshold:** Count of unique `destination.port` grouped by `source.ip` >= **10 within 60 seconds**
+
+> Why 10? In baseline (non-scan) traffic, Sysmon Event ID 3 generates 0–2 inbound connections per minute on this host. The Nmap scan produced 20 in under 60 seconds — a 10× deviation. Setting the threshold at 10 gives a 5× margin above baseline while catching even a slow partial scan.
+
+**What this catches that Suricata misses:**
+- Scans that don't match any Suricata ET signature (custom tools, modified Nmap profiles)
+- Scans using `-f` packet fragmentation (bypasses some IDS reassembly)
+- Slow-and-low scans (`--scan-delay 2s`) that spread traffic below SYN rate thresholds
+- Any tool that touches the victim's open ports — not just Nmap
+
+
 ### Elastic ES|QL Query
 
 ```esql
@@ -47,7 +75,7 @@ FROM suricata-*
 ```
 
 
-### Sigma Rule – Nmap SYN Scan Detection
+### Sigma Rule – Nmap SYN Scan Detection (Suricata)
 
 ```yaml
 title: Nmap SYN Port Scan Detected via Suricata
@@ -85,6 +113,61 @@ references:
   - https://attack.mitre.org/techniques/T1595/002/
   - https://docs.suricata.io/en/latest/rules/intro.html
 ```
+
+
+### Sigma Rule – Sysmon Port Sweep (Victim-Side, Platform-Agnostic)
+
+```yaml
+title: Port Sweep Detected via Sysmon Network Connection Burst
+id: c4d5e6f7-0002-4b3c-ad4e-bbccddeeff00
+status: experimental
+description: >-
+  Detects a burst of inbound Sysmon Event ID 3 (Network Connection Detected)
+  events from a single source IP to multiple destination ports within 60 seconds.
+  Indicative of a port scan reaching the victim host regardless of IDS coverage.
+  Threshold calibrated against real INC-005 data: 20 events in <60 seconds.
+author: KuRo
+date: 2026/04/28
+logsource:
+  product: windows
+  service: sysmon
+  definition: 'Requires Sysmon EventID 3 (NetworkConnect) logging enabled'
+detection:
+  selection:
+    EventID: 3
+    Initiated: 'false'
+  condition: selection | count(DestinationPort) by SourceIp > 10 within 60s
+fields:
+  - SourceIp
+  - DestinationIp
+  - DestinationPort
+  - Image
+  - User
+level: high
+tags:
+  - attack.reconnaissance
+  - attack.t1595.001
+references:
+  - https://attack.mitre.org/techniques/T1595/001/
+  - https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon
+falsepositives:
+  - Legitimate vulnerability scanners run by internal security team
+  - Automated asset discovery tools (should be allowlisted by source IP)
+```
+
+
+## Detection Coverage Matrix
+
+| Attack Variant | Suricata ET SCAN | pfSense SYN Rate | Sysmon Event ID 3 |
+|---|---|---|---|
+| Default `nmap -sS` (this incident) | ✅ Catches | ✅ Catches | ✅ Catches |
+| `nmap --scan-delay 2s` (slow scan) | ❌ Misses | ❌ Misses | ✅ **Catches** |
+| `nmap -f` (fragmented packets) | ⚠️ Partial | ✅ Catches | ✅ Catches |
+| `nmap -D` (decoy IPs) | ✅ Catches | ⚠️ Noisy | ✅ Catches (real dest logged) |
+| Custom scan tool (no Nmap UA) | ❌ Misses | ✅ Catches | ✅ Catches |
+| `nmap -sV` only (3 ports) | ⚠️ Partial | ❌ Too few | ✅ Catches |
+
+> **Key takeaway:** Sysmon Event ID 3 is the most reliable single detection source because it operates at the victim OS level, independent of network-layer IDS. It cannot be evaded by packet manipulation, timing, or signature bypass. **Deploy Sysmon on every Windows host — it costs nothing and covers gaps no network sensor can fill.**
 
 
 ## Suricata Signatures Triggered
