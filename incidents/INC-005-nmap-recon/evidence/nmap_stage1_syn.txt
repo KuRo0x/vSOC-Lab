@@ -1,0 +1,20 @@
+# Nmap 7.95 scan initiated 2026-04-28 03:06 +01
+# Command: sudo nmap -sS -p 1-10000 172.16.0.10 -oN evidence/nmap_stage1_syn.txt
+
+Starting Nmap 7.95 ( https://nmap.org ) at 2026-04-28 03:06 +01
+Stats: 0:00:12 elapsed; 0 hosts completed (1 up), 1 undergoing SYN Stealth Scan
+SYN Stealth Scan Timing: About 39.23% done; ETC: 03:06 (0:00:19 remaining)
+Stats: 0:00:14 elapsed; 0 hosts completed (1 up), 1 undergoing SYN Stealth Scan
+SYN Stealth Scan Timing: About 49.08% done; ETC: 03:06 (0:00:15 remaining)
+Nmap scan report for 172.16.0.10
+Host is up (0.00096s latency).
+Not shown: 9995 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+135/tcp  open  msrpc
+139/tcp  open  netbios-ssn
+445/tcp  open  microsoft-ds
+3389/tcp open  ms-wbt-server
+7680/tcp open  pando-pub
+MAC Address: 00:0C:29:E3:CC:CD (VMware)
+
+Nmap done: 1 IP address (1 host up) scanned in 25.38 seconds

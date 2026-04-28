@@ -1,0 +1,23 @@
+# Nmap 7.95 OS Detection
+# Command: sudo nmap -O 172.16.0.10 -oN evidence/nmap_stage2_os.txt
+
+Starting Nmap 7.95 ( https://nmap.org ) at 2026-04-28 03:06 +01
+Nmap scan report for 172.16.0.10
+Host is up (0.0020s latency).
+Not shown: 996 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+135/tcp  open  msrpc
+139/tcp  open  netbios-ssn
+445/tcp  open  microsoft-ds
+3389/tcp open  ms-wbt-server
+MAC Address: 00:0C:29:E3:CC:CD (VMware)
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running (JUST GUESSING): Microsoft Windows 10|11|2019 (97%)
+OS CPE: cpe:/o:microsoft:windows_10 cpe:/o:microsoft:windows_11 cpe:/o:microsoft:windows_server_2019
+Aggressive OS guesses: Microsoft Windows 10 1803 (97%), Microsoft Windows 10 1903 - 21H1 (97%), Microsoft Windows 11 (94%), Microsoft Windows 10 1809 (92%), Microsoft Windows 10 1909 (91%), Microsoft Windows 10 1909 - 2004 (91%), Windows Server 2019 (91%), Microsoft Windows 10 20H2 (88%)
+No exact OS matches for host (test conditions non-ideal).
+Network Distance: 1 hop
+
+OS detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 8.93 seconds

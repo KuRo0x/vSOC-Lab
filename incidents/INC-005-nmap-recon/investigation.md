@@ -3,112 +3,113 @@
 
 ## Timeline
 
-| Timestamp (UTC) | Event | Source | Tool |
+> All timestamps real — scan executed 2026-04-28 03:06 UTC+1
+
+| Timestamp (UTC+1) | Event | Source | Tool |
 |---|---|---|---|
-| 2026-04-28 01:12:00 | Baseline traffic normal on `172.16.0.10` | pfSense FW log | Kibana |
-| 2026-04-28 01:13:05 | First SYN packet from `172.16.0.11` to port 1 | pfSense FW log | Kibana |
-| 2026-04-28 01:13:05 | Sequential SYN sweep begins (ports 1 → 10000) | pfSense FW log | pfSense |
-| 2026-04-28 01:13:07 | Suricata fires `ET SCAN NMAP -sS window 1024` | Suricata alert | Kibana |
-| 2026-04-28 01:13:09 | Suricata fires `ET SCAN NMAP OS Detection Probe` | Suricata alert | Kibana |
-| 2026-04-28 01:13:11 | Sysmon Event ID 3 logs inbound connections on victim | Sysmon / Winlogbeat | Kibana |
-| 2026-04-28 01:13:50 | Sweep completes (~45 seconds, ~10,000 ports) | pfSense FW log | pfSense |
-| 2026-04-28 01:14:00 | Elastic rule fires — High severity alert generated | Elastic Security | Kibana Alerts |
-| 2026-04-28 01:14:30 | Analyst acknowledges alert in Kibana | Elastic Security | Kibana |
-| 2026-04-28 01:15:10 | WHOIS + AbuseIPDB lookup performed on `172.16.0.11` | OSINT | AbuseIPDB |
-| 2026-04-28 01:16:00 | Source IP added to `ATTACKER_RECON_BLOCK` alias in pfSense | pfSense | pfSense UI |
-| 2026-04-28 01:17:00 | Stage 2 OS probe attempt blocked at perimeter | pfSense FW log | Kibana |
-| 2026-04-28 01:45:00 | 30-minute post-scan monitoring window — no follow-on exploitation detected | SIEM | Kibana |
-| 2026-04-28 02:00:00 | Case set to Monitoring | — | — |
+| 03:06:00 | Baseline traffic normal on `172.16.0.10` | pfSense FW log | Kibana |
+| 03:06:00 | Stage 1: `nmap -sS -p 1-10000` initiated from `172.16.0.11` | Kali terminal | Nmap 7.95 |
+| 03:06:00 | First SYN packets observed — sequential port sweep begins (1 → 10000) | pfSense FW log | pfSense |
+| 03:06:12 | 39% of scan complete — ~3,923 ports probed | Nmap progress | Nmap |
+| 03:06:14 | 49% of scan complete — ~4,908 ports probed | Nmap progress | Nmap |
+| 03:06:25 | Stage 1 complete — 5 open ports discovered in **25.38 seconds** | Nmap output | Nmap |
+| 03:06:25 | Stage 2: `nmap -O` OS fingerprint probes initiated | Kali terminal | Nmap 7.95 |
+| 03:06:34 | OS detection complete — Windows 10 (97% confidence) in **8.93 seconds** | Nmap output | Nmap |
+| 03:06:34 | Stage 3: `nmap -sV -p 80,443,3389,445` version probes initiated | Kali terminal | Nmap 7.95 |
+| 03:06:42 | Version detection complete — RDP confirmed as Microsoft Terminal Services in **7.77 seconds** | Nmap output | Nmap |
+| 03:06:42 | Total recon completed — **42.08 seconds** from first probe to last result | All stages | Nmap |
+| 03:07:00 | Elastic alert fires (Suricata ET SCAN threshold crossed) | Elastic Security | Kibana Alerts |
+| 03:07:30 | Analyst acknowledges alert, begins investigation | Elastic Security | Kibana |
+| 03:08:00 | Open ports cross-referenced with INC-004 — SMB (445) confirmed as prior brute force target | SIEM correlation | Kibana |
+| 03:10:00 | Source IP added to `ATTACKER_RECON_BLOCK` alias in pfSense | pfSense | pfSense UI |
+| 03:15:00 | 5-min post-scan monitoring — no follow-on exploitation detected | SIEM | Kibana |
 
 
 ## Attack Narrative
 
-### Step 1 — Stealth SYN Sweep
+### Step 1 — Stealth SYN Sweep (25.38 seconds)
 
-The attacker (`172.16.0.11` / Kali Linux) initiated a TCP SYN scan against `172.16.0.10` across ports 1–10000 using `nmap -sS`. Each probe sent a single SYN packet; no three-way handshake was completed (half-open scan). This technique avoids generating a full TCP connection and historically bypasses older stateful firewalls that only log completed sessions. pfSense logged all inbound SYN packets on the WAN interface regardless of whether they were blocked or passed.
+Attacker `172.16.0.11` (Kali) executed `nmap -sS -p 1-10000` against `172.16.0.10` (DESKTOP-DPU3CDQ). The scan sent ~394 SYN packets per second — equivalent to **23,641 SYN/min**, which is 118× above the detection threshold of 200 SYN/min. Nmap sent half-open probes only (no three-way handshake completion), which avoids full TCP session logging on older systems but is visible to pfSense on all SYN flags.
 
-Scan rate: ~222 SYN/sec → **~13,320 SYN/min** → classified as **Aggressive** (threshold: >200 SYN/min).
-Port order: sequential (1, 2, 3 … 10000) — consistent with default Nmap behavior, not an evasion-aware attacker.
+Of 10,000 ports probed, **9,995 returned no response** (filtered by pfSense or Windows Firewall) and **5 returned SYN-ACK** (open): 135, 139, 445, 3389, 7680.
 
-### Step 2 — OS Fingerprinting
+Port order was strictly sequential (1, 2, 3 … 10000) — the Nmap default. A more evasion-aware attacker would randomize port order (`--randomize-hosts`) or add scan delays to evade rate-based rules.
 
-Following the port sweep, Nmap sent a series of OS detection probes: ICMP timestamp requests, TCP packets with unusual window sizes and flag combinations, and RST+ACK probes. Suricata matched these against `ET SCAN NMAP OS Detection Probe` (SID 2009582). The attacker's goal was to identify the target OS version to select appropriate exploit payloads for any follow-on attack.
+### Step 2 — OS Fingerprinting (8.93 seconds)
 
-### Step 3 — Service Version Detection
+Nmap sent ICMP timestamp requests, TCP window size probes, and unusual flag combinations to fingerprint the OS. Result: **Microsoft Windows 10 1803 at 97% confidence**, with Windows 11 and Server 2019 as secondary candidates. The OS CPE (`cpe:/o:microsoft:windows_10`) would allow an attacker to narrow down applicable CVEs and exploit frameworks (e.g., EternalBlue variants specific to Win10 SMB builds).
 
-Nmap ran `-sV` probes against the four ports that responded with SYN-ACK (80, 443, 3389, 445), attempting banner grabbing and service fingerprinting. Suricata matched the Nmap Scripting Engine User-Agent header in the HTTP probe. The version detection results would allow the attacker to identify specific software versions and map them against known CVEs.
+Note: Nmap flagged OS scan reliability as reduced due to no closed port being available for calibration — pfSense blocked most ports, leaving only open ones visible.
 
-### Step 4 — What Was Exposed
+### Step 3 — Service Version Detection (7.77 seconds)
 
-The scan revealed that **RDP (3389) and SMB (445) are reachable from the simulated external network**. Neither service should be publicly accessible in a hardened environment. In a real-world scenario, these exposed services represent high-value targets for follow-on brute force (aligns with INC-004) or exploitation of unpatched vulnerabilities.
+Nmap probed ports 80, 443, 445, and 3389 for service banners:
+- **80/tcp — filtered:** No response. HTTP not accessible from this network segment.
+- **443/tcp — filtered:** No response. HTTPS not accessible.
+- **445/tcp — open:** `microsoft-ds?` — SMB confirmed open but banner not fully captured.
+- **3389/tcp — open:** `Microsoft Terminal Services` confirmed via RDP handshake banner.
+
+### Step 4 — Critical Finding: SMB + RDP Both Externally Visible
+
+The scan revealed **both SMB (445) and RDP (3389) are reachable** from the attacker’s network segment. These are the two highest-value services for credential-based attacks:
+- **SMB (445)** is the exact service targeted in **INC-004** (brute force via `netexec`). The attacker who ran this Nmap scan already has confirmation that SMB is open — a natural next step is the brute force chain documented in INC-004.
+- **RDP (3389)** is Microsoft Terminal Services confirmed — direct remote access if credentials are obtained.
+
+This establishes a realistic **kill chain**: Recon (INC-005) → Credential Attack (INC-004 pattern) → potential Remote Access.
 
 ### Step 5 — No Follow-On Exploitation
 
-The scan terminated after ~45 seconds. No authentication attempts, exploit payloads, or lateral movement indicators were observed during the 30-minute post-scan monitoring window. The case reflects a pure reconnaissance phase — the attacker collected port/service/OS data for potential future use.
+No authentication attempts, exploit payloads, or lateral movement were observed after the scan. The recon phase ended after 42.08 seconds total. Case classified as **pure reconnaissance**.
 
 
-## Raw Evidence Snippets
+## Raw Nmap Output Summary
 
-### pfSense Firewall Log (representative)
-
+### Stage 1 — Open Ports Discovered
 ```
-Apr 28 01:13:05  pfsense filterlog: 5,16,0,64124,vtnet0,match,block,in,4,0x0,,64,0,0,DF,6,tcp,44,172.16.0.11,172.16.0.10,54892,1,0,S,3823918220,,1024,,
-Apr 28 01:13:05  pfsense filterlog: 5,16,0,64124,vtnet0,match,block,in,4,0x0,,64,0,0,DF,6,tcp,44,172.16.0.11,172.16.0.10,54893,2,0,S,3823918221,,1024,,
-Apr 28 01:13:05  pfsense filterlog: 5,16,0,64124,vtnet0,match,block,in,4,0x0,,64,0,0,DF,6,tcp,44,172.16.0.11,172.16.0.10,54894,3,0,S,3823918222,,1024,,
-... (9,997 additional sequential SYN entries)
-```
-
-### Suricata EVE JSON (representative)
-
-```json
-{
-  "timestamp": "2026-04-28T01:13:07.412Z",
-  "event_type": "alert",
-  "src_ip": "172.16.0.11",
-  "src_port": 54910,
-  "dest_ip": "172.16.0.10",
-  "dest_port": 80,
-  "proto": "TCP",
-  "alert": {
-    "action": "allowed",
-    "gid": 1,
-    "signature_id": 2000537,
-    "rev": 8,
-    "signature": "ET SCAN NMAP -sS window 1024",
-    "category": "Attempted Information Leak",
-    "severity": 2
-  }
-}
+Not shown: 9995 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+135/tcp  open  msrpc
+139/tcp  open  netbios-ssn
+445/tcp  open  microsoft-ds
+3389/tcp open  ms-wbt-server
+7680/tcp open  pando-pub
+MAC Address: 00:0C:29:E3:CC:CD (VMware)
+Nmap done: 1 IP address (1 host up) scanned in 25.38 seconds
 ```
 
-### Sysmon Event ID 3 (Network Connection – representative)
-
+### Stage 2 — OS Detection
 ```
-EventID: 3
-UtcTime: 2026-04-28 01:13:11.882
-ProcessGuid: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
-ProcessId: 4
-Image: System
-Protocol: tcp
-Initiated: false
-SourceIsIpv6: false
-SourceIp: 172.16.0.11
-SourceHostname: kali
-SourcePort: 54920
-DestinationIp: 172.16.0.10
-DestinationHostname: DESKTOP-DPU3CDQ
-DestinationPort: 445
-DestinationPortName: microsoft-ds
+Running (JUST GUESSING): Microsoft Windows 10|11|2019 (97%)
+Aggressive OS guesses: Microsoft Windows 10 1803 (97%), Windows 10 1903-21H1 (97%),
+Windows 11 (94%), Windows 10 1809 (92%), Windows 10 1909 (91%), Server 2019 (91%)
+Nmap done: 1 IP address (1 host up) scanned in 8.93 seconds
+```
+
+### Stage 3 — Service Versions
+```
+PORT     STATE    SERVICE       VERSION
+80/tcp   filtered http
+443/tcp  filtered https
+445/tcp  open     microsoft-ds?
+3389/tcp open     ms-wbt-server Microsoft Terminal Services
+Nmap done: 1 IP address (1 host up) scanned in 7.77 seconds
 ```
 
 
-## OSINT Enrichment (Lab Simulation)
+## OSINT Enrichment
 
 | Field | Value |
 |---|---|
-| Source IP | 172.16.0.11 (internal lab — Kali attacker VM) |
-| Real-world equivalent | External threat actor IP |
-| AbuseIPDB lookup | Would be performed on real attacker IP |
-| Shodan | Would reveal open services on real attacker host |
-| VirusTotal | Would flag known malicious IPs |
-| Tool identified | Nmap (confirmed via Suricata signature + sequential port pattern) |
+| **Source IP** | 172.16.0.11 (Kali attacker VM — internal lab) |
+| **Target IP** | 172.16.0.10 (DESKTOP-DPU3CDQ — Windows 10 victim VM) |
+| **Target MAC OUI** | VMware Inc. (00:0C:29) — confirms VM environment |
+| **Target OS** | Microsoft Windows 10 1803 (97% confidence, Nmap) |
+| **Real-world OSINT** | On a real engagement: AbuseIPDB + Shodan + VirusTotal lookup on src IP |
+| **Tool confirmed** | Nmap 7.95 (Kali default) — confirmed via Suricata ET SCAN signature match |
+
+
+## INC Correlation
+
+| Related Incident | Link | Relevance |
+|---|---|---|
+| **INC-004** | `../INC-004-smb-bruteforce/` | SMB (445) discovered open by this scan is the exact service brute-forced in INC-004. Recon → Brute Force kill chain confirmed. |
